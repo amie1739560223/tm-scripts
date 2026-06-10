@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CSY OS全能编辑器
 // @namespace    http://tampermonkey.net/
-// @version      5.1.1
+// @version      5.2
 // @description  支持角色/群聊识别、按日期/关键词搜索、多选复制/删除、编辑历史消息、时间平移与ID重排
 // @author       自用
 // @match        https://sully-frontend.pages.dev/*
