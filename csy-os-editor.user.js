@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         CSY OS全能编辑器
 // @namespace    http://tampermonkey.net/
-// @version      5.1
+// @version      5.1.1
 // @description  支持角色/群聊识别、按日期/关键词搜索、多选复制/删除、编辑历史消息、时间平移与ID重排
 // @author       自用
 // @match        https://sully-frontend.pages.dev/*
@@ -1690,67 +1690,62 @@ const timeStr = `${pad(date.getMonth()+1)}/${pad(date.getDate())} ${pad(date.get
 
     // 3. ✨ 核心更新函数：支持日常消息修改 + 通话气泡深度同步
         // ✨ 深度修正版：精准匹配名字前缀并同步 metadata
-    async function updateMessageContent(id, newText) {
+        async function updateMessageContent(id, newText) {
         try {
             const db = await openDB();
             const tx = db.transaction(['messages'], 'readwrite');
             const store = tx.objectStore('messages');
-
-            // 1. 获取原始数据
             const msg = window.allMessagesCache.find(m => String(m.id) === String(id));
             if (!msg) throw new Error("缓存丢失");
 
-            // 2. 特殊处理：如果是通话记录，在覆盖 content 前，先建立 [名字 -> 角色] 映射表
             if (msg.type === 'call_log' && msg.metadata && Array.isArray(msg.metadata.conversation)) {
-                console.log('正在解析通话记录名册...');
-
                 const nameToRole = {};
                 const oldLines = msg.content.split('\n');
                 const oldConv = msg.metadata.conversation;
 
-                // 建立映射逻辑：遍历旧 content，匹配旧 metadata 的角色
+                // 1. 建立 [名字 -> 角色] 映射
                 let convIdx = 0;
                 oldLines.forEach(line => {
                     const sepIdx = line.indexOf(': ');
                     if (sepIdx !== -1 && convIdx < oldConv.length) {
                         const name = line.substring(0, sepIdx).trim();
-                        // 建立关联，例如：{"Y": "assistant", "遇": "user"}
-                        if (!nameToRole[name]) {
-                            nameToRole[name] = oldConv[convIdx].role;
-                        }
+                        if (!nameToRole[name]) nameToRole[name] = oldConv[convIdx].role;
                         convIdx++;
                     }
                 });
 
-                console.log('已建立角色映射表:', nameToRole);
-
-                // 3. 开始解析【新文本】并同步
+                // 2. 解析新文本
                 const newLines = newText.split('\n');
                 const newConversation = [];
 
-                newLines.forEach(line => {
+                newLines.forEach((line, index) => {
                     const sepIdx = line.indexOf(': ');
                     if (sepIdx !== -1) {
                         const name = line.substring(0, sepIdx).trim();
                         const text = line.substring(sepIdx + 2).trim();
-
-                        // 从映射表里查找该名字对应的 role
                         const role = nameToRole[name];
+                        
                         if (role) {
-                            newConversation.push({ role: role, content: text });
+                            const newObj = { role: role, content: text };
+                            
+                            // ✨ 核心保护逻辑：
+                            // 如果原来的位置（index）有气泡，且角色一致，就继承它的所有特殊属性（如 hasAudio）
+                            if (oldConv[index] && oldConv[index].role === role) {
+                                Object.assign(newObj, oldConv[index]); // 复制旧对象的所有属性
+                                newObj.content = text; // 确保文字是修改后的新文字
+                            }
+                            
+                            newConversation.push(newObj);
                         }
                     }
                 });
 
-                // 4. 覆盖元数据
                 if (newConversation.length > 0) {
                     msg.metadata.conversation = newConversation;
                     msg.metadata.turns = newConversation.length;
-                    console.log(`成功同步 ${newConversation.length} 条气泡数据`);
                 }
             }
 
-            // 5. 更新主文本并存入数据库
             msg.content = newText;
             if (msg.metadata && msg.metadata.sourceText) msg.metadata.sourceText = newText;
 
@@ -1759,11 +1754,11 @@ const timeStr = `${pad(date.getMonth()+1)}/${pad(date.getDate())} ${pad(date.get
                 req.onsuccess = res; req.onerror = rej;
             });
 
-            showResult('✅ 修改成功' + (msg.type === 'call_log' ? '（气泡已实时同步）' : ''), true);
+            showResult('✅ 同步成功（已保护语音标记）', true);
             renderMessageList();
-        } catch (e) {
-            console.error('同步引擎报错:', e);
-            showResult('❌ 修改失败: ' + e.message, false);
+        } catch (e) { 
+            console.error('同步报错:', e);
+            showResult('❌ 修改失败: ' + e.message, false); 
         }
     }
 
