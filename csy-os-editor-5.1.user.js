@@ -3,7 +3,7 @@
 // @namespace    http://tampermonkey.net/
 // @version      5.1
 // @description  支持角色/群聊识别、按日期/关键词搜索、多选复制/删除、编辑历史消息、时间平移与ID重排
-// @author       栗子
+// @author       自用
 // @match        https://sully-frontend.pages.dev/*
 // @match        https://qegj567-cloud.github.io/SullyOS/*
 // @grant        none
