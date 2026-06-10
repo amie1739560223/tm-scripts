@@ -7,6 +7,8 @@
 // @match        https://sully-frontend.pages.dev/*
 // @match        https://qegj567-cloud.github.io/SullyOS/*
 // @grant        none
+// @downloadURL https://github.com/amie1739560223/tm-scripts/raw/refs/heads/main/csy-os-editor.user.js
+// @updateURL   https://github.com/amie1739560223/tm-scripts/raw/refs/heads/main/csy-os-editor.user.js
 // @require https://cdn.jsdelivr.net/npm/dom-to-image-more@3.4.0/dist/dom-to-image-more.min.js
 // ==/UserScript==
 
